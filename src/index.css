@@ -1,0 +1,261 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-slate-800;
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+/* Tema gelap portal diaktifkan melalui class `dark` pada elemen html. */
+html.dark body { background: #0f172a; color: #e2e8f0; }
+html.dark .dashboard-shell,
+html.dark .dashboard-shell main,
+html.dark .dashboard-shell main > div { background-color: #0f172a; }
+html.dark .bg-white { background-color: #111827 !important; }
+html.dark .bg-slate-50 { background-color: #1e293b !important; }
+html.dark .bg-slate-100 { background-color: #334155 !important; }
+html.dark .text-slate-900 { color: #f8fafc !important; }
+html.dark .text-slate-800 { color: #e2e8f0 !important; }
+html.dark .text-slate-700 { color: #cbd5e1 !important; }
+html.dark .text-slate-600, html.dark .text-slate-500 { color: #94a3b8 !important; }
+html.dark .text-slate-400 { color: #64748b !important; }
+html.dark .border-slate-200, html.dark .border-slate-200\/80, html.dark .border-slate-100 { border-color: #334155 !important; }
+html.dark input, html.dark textarea, html.dark select, html.dark .input { background-color: #1e293b !important; border-color: #475569 !important; color: #f8fafc !important; }
+html.dark .hover\:bg-slate-50:hover, html.dark .table-row-hover:hover { background-color: #1e293b !important; }
+html.dark .dashboard-card, html.dark .card { background-color: #111827; border-color: #334155; }
+
+@layer utilities {
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .font-signature { font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive; }
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl border border-slate-200/80 bg-white shadow-[0_14px_38px_rgba(16,44,43,.055)];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white
+      font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-[#c9f36b] font-bold
+      text-[#102c2b] shadow-sm transition-all hover:bg-[#d8fa91] hover:shadow-md;
+  }
+
+  .input {
+    @apply rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700
+      placeholder:text-slate-400 focus:border-blue-400 focus:outline-none
+      focus:ring-2 focus:ring-blue-100;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .badge-info {
+    @apply bg-sky-50 text-sky-700;
+  }
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700;
+  }
+  .badge-danger {
+    @apply bg-red-50 text-red-600;
+  }
+
+  .table-row-hover {
+    @apply transition-colors hover:bg-slate-50;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.slate.300') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.25s ease-out;
+  }
+
+  .dashboard-shell {
+    background: #ffffff;
+  }
+  .dashboard-shell main,
+  .dashboard-shell main > div {
+    background-color: #ffffff;
+  }
+  .dashboard-card {
+    @apply rounded-3xl border border-slate-200/80 bg-white shadow-[0_14px_38px_rgba(16,44,43,.055)];
+  }
+  .section-kicker {
+    color: #16766d;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+  }
+}
+
+/* Keyframes ditaruh di luar @layer supaya tidak tergantung urutan Tailwind layer */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 6s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Putaran ambient untuk motif "sayap" di halaman Beranda — jauh lebih lambat
+   dari .animate-spin-slow supaya terasa tenang, bukan seperti loading spinner. */
+.animate-spin-ambient {
+  animation: spinSlow 60s linear infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-ambient,
+  .animate-spin-slow {
+    animation: none;
+  }
+}
+
+/* ============================================================
+    Set animasi tambahan untuk Beranda — dipakai bersamaan dengan
+    palet "lima sayap" (brand.teal/green/gold/red/blue di tailwind.config).
+   ============================================================ */
+
+/* Blob dekoratif di background hero, mengambang pelan */
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(18px, -22px) scale(1.06); }
+  66% { transform: translate(-14px, 16px) scale(0.96); }
+}
+.animate-blob-float {
+  animation: blobFloat 14s ease-in-out infinite;
+}
+.animate-blob-float-slow {
+  animation: blobFloat 20s ease-in-out infinite reverse;
+}
+
+/* Gradasi judul hero yang "bernapas" pelan, bukan statis */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient-shift {
+  background-size: 200% auto;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+/* Kilau (shimmer) yang menyapu banner CTA pendaftaran */
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+@keyframes shimmerSweep {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%) skewX(-12deg); }
+}
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: shimmerSweep 3.2s ease-in-out infinite;
+}
+
+/* Titik warna "sayap" berdenyut bergantian di badge foto hero */
+@keyframes wingPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+.animate-wing-pulse {
+  animation: wingPulse 2.2s ease-in-out infinite;
+}
+
+/* Spotlight yang mengikuti kursor di kartu interaktif (grup, produk, menu) */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(255, 255, 255, 0.6),
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-float,
+  .animate-blob-float-slow,
+  .animate-gradient-shift,
+  .animate-shimmer::after,
+  .animate-wing-pulse {
+    animation: none;
+  }
+}
+
+
+/* Animasi identitas warna pada strip navbar publik */
+@keyframes navbarGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-navbar-gradient {
+  animation: navbarGradient 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-navbar-gradient {
+    animation: none;
+  }
+}

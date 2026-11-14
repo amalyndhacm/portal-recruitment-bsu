@@ -1,0 +1,6 @@
+[functions.send-interview-notification]
+verify_jwt = true
+
+[functions.employee-register]
+verify_jwt = false
+
