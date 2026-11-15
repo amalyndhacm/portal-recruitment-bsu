@@ -71,7 +71,6 @@ type PublicView = 'home' | 'login' | 'register' | 'profile' | 'career' | 'contac
 export default function App() {
   const { user, loading, recoveryMode, logout } = useAuth();
   const [page, setPage] = useState<PageId>('candidate-dashboard');
-  const [prkFormRequest, setPrkFormRequest] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('portal-theme') === 'dark');
   const [notificationState, setNotificationState] = useState<{ scope: string; items: AppNotification[] }>({ scope: '', items: [] });
   const [publicView, setPublicView] = useState<PublicView>('home');
@@ -89,17 +88,18 @@ export default function App() {
   }, [isDarkMode]);
   const toggleTheme = () => setIsDarkMode((current) => !current);
   const selectedLoginRole = loginRole;
-  // Role yang dipilih pada halaman login menjadi role tampilan aktif. Ini
-  // penting untuk akun lama yang profilnya masih tersimpan sebagai
-  // `super_admin`/`karyawan`, tetapi dipakai masuk ke workspace HR,
-  // Recruitment, atau Comben.
+  // Semua akun staf yang masuk dengan alias NIP resmi diarahkan ke workspace
+  // Recruitment bersama. Izin data tetap ditentukan RLS berdasarkan status
+  // karyawan aktif di employee_master, bukan oleh pilihan tampilan ini.
   const storedUserRole = normalizePortalRole(user?.accessLevel);
-  // Role candidate dari profil selalu menjadi prioritas. Ini mencegah akun
-  // kandidat masuk ke Comben/HR hanya karena sessionStorage masih menyimpan
-  // pilihan role dari sesi login sebelumnya.
+  const isNipEmployeeAccount = /@(?:bsu\.co\.id|portal\.bsu\.co\.id)$/i.test(user?.email || '');
+  // Kandidat selalu tetap di portal kandidat; staf ber-alias NIP masuk ke
+  // dashboard Recruitment yang sama, apa pun role workspace lama yang tersimpan.
   const effectiveAccessLevel = storedUserRole === 'candidate'
     ? 'candidate'
-    : selectedLoginRole ?? user?.accessLevel;
+    : isNipEmployeeAccount
+      ? 'recruitment'
+      : selectedLoginRole ?? user?.accessLevel;
   const isCandidate = isCandidateRole(effectiveAccessLevel);
   const isCandidateAccount = normalizePortalRole(user?.accessLevel) === 'candidate';
   const notificationAudience = isCandidate ? 'candidate' : 'recruitment';
@@ -359,8 +359,8 @@ export default function App() {
     const goToPrk = () => {
       sessionStorage.setItem('portal-session-active', '1');
       setShowPublicHome(false);
+      sessionStorage.setItem('portal:open-prk-form', '1');
       setPage('rt-employee-request');
-      setPrkFormRequest((value) => value + 1);
       setPublicView('home');
     };
     const logoutToHome = () => {
@@ -440,8 +440,8 @@ export default function App() {
         }}
         onPrkClick={() => {
           sessionStorage.setItem('portal-session-active', '1');
+          sessionStorage.setItem('portal:open-prk-form', '1');
           setPage('rt-employee-request');
-          setPrkFormRequest((value) => value + 1);
         }}
         onLogout={() => {
           sessionStorage.removeItem('portal-login-role');
@@ -532,7 +532,7 @@ export default function App() {
       case 'rt-gallery': return <GalleryPage />;
       case 'cb-incentive': return <IncentivePage />;
       case 'cb-documentation': return <DocumentationPage />;
-      case 'rt-employee-request': return <EmployeeRequestPage accessLevel={effectiveAccessLevel} openNewFormRequest={prkFormRequest} />;
+      case 'rt-employee-request': return <EmployeeRequestPage accessLevel={effectiveAccessLevel} />;
       case 'cb-salary-recap': return <SalaryRecapPage />;
       default:
         if (dashboardRole === 'candidate') return <CandidatePortalPage name={user.name} email={user.email} onNavigate={setPage} />;

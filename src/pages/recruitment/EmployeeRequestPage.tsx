@@ -143,7 +143,7 @@ function buildApprovalVerificationUrl(requestId: string, stage: 'requester' | 'd
   return url.toString();
 }
 
-export default function EmployeeRequestPage({ showHeader = true, initialOpen = false, openNewFormRequest, publicOnly = false, accessLevel }: { showHeader?: boolean; initialOpen?: boolean; openNewFormRequest?: number; publicOnly?: boolean; accessLevel?: string }) {
+export default function EmployeeRequestPage({ showHeader = true, initialOpen = false, publicOnly = false, accessLevel }: { showHeader?: boolean; initialOpen?: boolean; publicOnly?: boolean; accessLevel?: string }) {
   const { user } = useAuth();
   // Semua pengguna yang sudah masuk ke halaman internal dapat memberikan
   // keputusan dengan memilih kapasitas/jabatan approval yang digunakan.
@@ -187,14 +187,15 @@ export default function EmployeeRequestPage({ showHeader = true, initialOpen = f
   const [submissionNotice, setSubmissionNotice] = useState<SubmissionNotice | null>(null);
 
   useEffect(() => {
-    if (openNewFormRequest === undefined) return;
+    if (publicOnly || sessionStorage.getItem('portal:open-prk-form') !== '1') return;
+    sessionStorage.removeItem('portal:open-prk-form');
     setEditingId(null);
     setForm(emptyForm);
     setAttachment(null);
     setAttachmentError('');
     setDetailId(null);
     setShowForm(true);
-  }, [openNewFormRequest]);
+  }, [publicOnly]);
 
   const load = async () => {
     setLoading(true);
