@@ -245,10 +245,10 @@ function formatJobDeadline(deadline: string) {
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function getHiringCount(job: JobOpening) {
-  const requirement = job.qualifications.find((item) => /^Kebutuhan:\s*\d+\s*orang$/i.test(item));
-  const count = requirement?.match(/\d+/)?.[0];
-  return count ? Number(count) : null;
+function formatJobDeadlineCompact(deadline: string) {
+  const date = new Date(`${deadline}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return deadline;
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
 export default function HomePage({
@@ -404,9 +404,9 @@ export default function HomePage({
             </div>
 
             {loadingOpenings ? (
-              <div className="flex h-28 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent text-sm text-slate-400">Memuat lowongan terbaru...</div>
+              <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent text-sm text-slate-400">Memuat lowongan terbaru...</div>
             ) : latestJobs.length === 0 ? (
-              <div className="flex h-28 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent px-4 text-center text-sm text-slate-500">Belum ada lowongan aktif saat ini. Silakan cek kembali nanti.</div>
+              <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent px-4 text-center text-sm text-slate-500">Belum ada lowongan aktif saat ini. Silakan cek kembali nanti.</div>
             ) : (
               <>
                 <div
@@ -432,7 +432,6 @@ export default function HomePage({
                 >
                   <span aria-hidden="true" className="shrink-0 basis-0" />
                   {latestJobs.map((job, index) => {
-                    const hiringCount = getHiringCount(job);
                     const isActive = index === activeOpeningIndex;
                     return (
                       <button
@@ -447,18 +446,17 @@ export default function HomePage({
                           sessionStorage.setItem('portal-highlight-job-id', job.id);
                           onNavigate('career');
                         }}
-                        aria-label={`${isActive ? 'Buka detail' : 'Pindahkan ke tengah'} lowongan ${job.title}, lokasi ${job.location}, ${hiringCount === null ? 'jumlah belum diinformasikan' : `jumlah ${hiringCount} orang`}, dibuka sampai ${formatJobDeadline(job.deadline)}`}
-                        className={`group relative z-0 flex min-h-[82px] flex-[0_0_31%] snap-center flex-col justify-between rounded-xl p-2.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-teal/30 sm:flex-[0_0_31%] lg:flex-[0_0_31%] ${isActive ? 'z-10 scale-100 border border-blue-700/40 bg-gradient-to-br from-[#2459a6] to-[#3476bf] shadow-[0_20px_48px_rgba(36,89,166,.3)]' : 'scale-[.88] border border-white/80 bg-gradient-to-br from-white/75 via-white/55 to-brand-teal/10 opacity-80 shadow-[0_8px_24px_rgba(16,44,43,.08)] hover:opacity-100'}`}
+                        aria-label={`${isActive ? 'Buka detail' : 'Pindahkan ke tengah'} lowongan ${job.title}, lokasi ${job.location}, batas lamaran ${formatJobDeadline(job.deadline)}`}
+                        className={`group relative z-0 flex h-[104px] flex-[0_0_148px] snap-center flex-col justify-between rounded-xl p-2 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-teal/30 ${isActive ? 'z-10 scale-100 border border-blue-700/40 bg-gradient-to-br from-[#2459a6] to-[#3476bf] shadow-[0_20px_48px_rgba(36,89,166,.3)]' : 'scale-[.88] border border-white/80 bg-gradient-to-br from-white/75 via-white/55 to-brand-teal/10 opacity-80 shadow-[0_8px_24px_rgba(16,44,43,.08)] hover:opacity-100'}`}
                       >
-                        <span className="flex items-start gap-2.5">
-                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${isActive ? 'bg-white/15 text-amber-300' : 'bg-brand-teal/10 text-brand-teal-dark group-hover:bg-brand-teal group-hover:text-white'}`}><Briefcase size={16} /></span>
+                        <span className="flex items-start gap-2">
+                          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${isActive ? 'bg-white/15 text-amber-300' : 'bg-brand-teal/10 text-brand-teal-dark group-hover:bg-brand-teal group-hover:text-white'}`}><Briefcase size={14} /></span>
                           <span className="min-w-0">
-                            <span className={`block line-clamp-2 font-display text-[11px] font-bold leading-snug sm:text-xs ${isActive ? 'text-white' : 'text-slate-900'}`}>{job.title}</span>
+                            <span className={`block line-clamp-2 font-display text-[10px] font-bold leading-snug sm:text-[11px] ${isActive ? 'text-white' : 'text-slate-900'}`}>{job.title}</span>
                             <span className={`mt-1 flex items-center gap-1 truncate text-[9px] sm:text-[10px] ${isActive ? 'text-blue-50' : 'text-slate-500'}`}><MapPin size={11} className={`shrink-0 ${isActive ? 'text-amber-300' : 'text-brand-teal'}`} />{job.location}</span>
-                            <span className={`mt-1 flex items-center gap-1 truncate text-[9px] font-semibold sm:text-[10px] ${isActive ? 'text-amber-200' : 'text-brand-teal-dark'}`}><Users size={11} className="shrink-0" />{hiringCount === null ? 'Jumlah belum diinformasikan' : `${hiringCount} orang`}</span>
                           </span>
                         </span>
-                        <span className={`mt-1.5 flex items-center gap-1 border-t pt-1.5 text-[8px] font-medium sm:text-[9px] ${isActive ? 'border-white/20 text-blue-50' : 'border-slate-200/70 text-slate-500'}`}><CalendarClock size={12} className={`shrink-0 ${isActive ? 'text-amber-300' : 'text-brand-blue'}`} />Dibuka sampai {formatJobDeadline(job.deadline)}</span>
+                        <span title={`Dibuka sampai ${formatJobDeadline(job.deadline)}`} className={`mt-1 flex items-center gap-1 whitespace-nowrap border-t pt-1 text-[7px] font-medium sm:text-[8px] ${isActive ? 'border-white/20 text-blue-50' : 'border-slate-200/70 text-slate-500'}`}><CalendarClock size={10} className={`shrink-0 ${isActive ? 'text-amber-300' : 'text-brand-blue'}`} />Dibuka sampai {formatJobDeadlineCompact(job.deadline)}</span>
                       </button>
                     );
                   })}

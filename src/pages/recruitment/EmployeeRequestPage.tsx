@@ -17,6 +17,7 @@ import {
   REGIONAL_OPTIONS, getAreaOptions, getDescriptionOptions, findLocationByDescription,
 } from '@/lib/costCenter';
 import { notifyPortal, notifyPortalOnce } from '@/lib/portalNotifications';
+import { buildPublicJobDetails } from '@/lib/jobOpenings';
 
 // ---------------------------------------------------------------------------
 // Surat Pengajuan Penambahan / Replacement Karyawan
@@ -573,14 +574,7 @@ export default function EmployeeRequestPage({ showHeader = true, initialOpen = f
       const publishedAt = new Date().toISOString();
       const deadline = new Date();
       deadline.setDate(deadline.getDate() + 30);
-      const qualifications = [
-        `Kebutuhan: ${detail.quantity} orang`,
-        detail.education_level, detail.major, detail.gender, detail.age_requirement,
-        detail.work_experience, detail.special_skill, detail.personal_characteristics,
-        detail.responsible_to ? `Bertanggung jawab kepada: ${detail.responsible_to}` : null,
-        detail.main_duties ? `Tugas utama: ${detail.main_duties}` : null,
-        detail.additional_skills,
-      ].filter(Boolean) as string[];
+      const publicJobDetails = buildPublicJobDetails(detail);
 
       // Setelah validasi HR selesai, PRK langsung menjadi sumber lowongan aktif.
       // Flyer bersifat opsional; kartu lowongan di Beranda cukup memakai data ini.
@@ -596,7 +590,10 @@ export default function EmployeeRequestPage({ showHeader = true, initialOpen = f
           location: detail.div_job_site,
           type: detail.employment_status === 'Kontrak' ? 'Contract' : 'Full-time',
           color_index: 0,
-          qualifications,
+          description: publicJobDetails.description,
+          qualifications: publicJobDetails.qualifications,
+          responsibilities: publicJobDetails.responsibilities,
+          benefits: publicJobDetails.benefits,
           deadline: deadline.toISOString().slice(0, 10),
           featured: true,
           is_active: true,
@@ -699,21 +696,17 @@ export default function EmployeeRequestPage({ showHeader = true, initialOpen = f
     try {
       const deadline = new Date();
       deadline.setDate(deadline.getDate() + 30);
-      const qualifications = [
-        `Kebutuhan: ${request.quantity} orang`,
-        request.education_level, request.major, request.gender, request.age_requirement,
-        request.work_experience, request.special_skill, request.personal_characteristics,
-        request.responsible_to ? `Bertanggung jawab kepada: ${request.responsible_to}` : null,
-        request.main_duties ? `Tugas utama: ${request.main_duties}` : null,
-        request.additional_skills,
-      ].filter(Boolean) as string[];
+      const publicJobDetails = buildPublicJobDetails(request);
       const { data, error } = await db.from('job_openings').insert({
         title: request.position_needed,
         division: request.div_job_site,
         location: request.div_job_site,
         type: request.employment_status === 'Kontrak' ? 'Contract' : 'Full-time',
         color_index: 0,
-        qualifications,
+        description: publicJobDetails.description,
+        qualifications: publicJobDetails.qualifications,
+        responsibilities: publicJobDetails.responsibilities,
+        benefits: publicJobDetails.benefits,
         deadline: deadline.toISOString().slice(0, 10),
         featured: false,
         // Lowongan dibuat sebagai draft terlebih dahulu. Recruitment harus

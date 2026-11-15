@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Briefcase, Trash2, Pencil, Star, ImagePlus, UploadCloud } from 'lucide-react';
+import { Briefcase, Trash2, Pencil, Star, ImagePlus, UploadCloud, Plus, RotateCcw } from 'lucide-react';
 import {
+  buildPublicJobDetails,
   fetchAllJobOpenings,
   updateJobOpening,
   deleteJobOpening,
@@ -9,7 +10,7 @@ import {
   type JobOpening,
   type JobOpeningInput,
 } from '@/lib/jobOpenings';
-import { db } from '@/lib/database';
+import { db, type EmployeeRequest } from '@/lib/database';
 import { PageHeader, Card, Button, Input, Select, TextArea, LoadingState, EmptyState, Badge } from '@/components/ui';
 import { notifyPortal } from '@/lib/portalNotifications';
 
@@ -22,7 +23,10 @@ const emptyForm = {
   type: 'Full-time',
   deadline: '',
   colorLabel: COLOR_LABELS[0],
-  qualificationsText: '',
+  description: '',
+  responsibilities: [] as string[],
+  qualifications: [] as string[],
+  benefits: [] as string[],
   featured: false,
   isActive: false,
 };
@@ -37,10 +41,10 @@ function toInput(form: FormState): JobOpeningInput {
     type: form.type,
     deadline: form.deadline,
     colorIndex: COLOR_LABELS.indexOf(form.colorLabel) as 0 | 1 | 2 | 3 | 4,
-    qualifications: form.qualificationsText
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean),
+    description: form.description.trim(),
+    responsibilities: form.responsibilities.map((s) => s.trim()).filter(Boolean),
+    qualifications: form.qualifications.map((s) => s.trim()).filter(Boolean),
+    benefits: form.benefits.map((s) => s.trim()).filter(Boolean),
     featured: form.featured,
     isActive: form.isActive,
   };
@@ -54,10 +58,39 @@ function fromOpening(o: JobOpening): FormState {
     type: o.type,
     deadline: o.deadline,
     colorLabel: COLOR_LABELS[o.colorIndex] ?? COLOR_LABELS[0],
-    qualificationsText: o.qualifications.join('\n'),
+    description: o.description || '',
+    responsibilities: [...(o.responsibilities || [])],
+    qualifications: [...(o.qualifications || [])],
+    benefits: [...(o.benefits || [])],
     featured: o.featured,
     isActive: o.isActive,
   };
+}
+
+function PointListEditor({ label, items, onChange, placeholder, addLabel, emptyMessage }: { label: string; items: string[]; onChange: (items: string[]) => void; placeholder: string; addLabel: string; emptyMessage: string }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="text-sm font-semibold text-slate-800">{label}</h4>
+        <button type="button" onClick={() => onChange([...items, ''])} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-teal-200 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800 transition hover:bg-teal-50">
+          <Plus size={14} /> {addLabel}
+        </button>
+      </div>
+      {items.length ? (
+        <div className="mt-3 space-y-2">
+          {items.map((item, index) => (
+            <div key={`${label}-${index}`} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-center text-xs font-semibold text-slate-400">{index + 1}.</span>
+              <input value={item} onChange={(event) => onChange(items.map((current, currentIndex) => currentIndex === index ? event.target.value : current))} placeholder={placeholder} className="input min-w-0 flex-1 bg-white text-sm" aria-label={`${label} poin ${index + 1}`} />
+              <button type="button" onClick={() => onChange(items.filter((_, currentIndex) => currentIndex !== index))} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600" aria-label={`Hapus ${label} poin ${index + 1}`}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : <p className="mt-3 text-xs text-slate-500">{emptyMessage}</p>}
+    </section>
+  );
 }
 
 export default function JobOpeningsAdminPage() {
@@ -67,6 +100,7 @@ export default function JobOpeningsAdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [loadingPrkSource, setLoadingPrkSource] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const load = async () => {
@@ -162,6 +196,37 @@ export default function JobOpeningsAdminPage() {
     load();
   };
 
+  const importFromPrk = async () => {
+    if (!editingId) return;
+    if (!confirm('Ambil ulang ringkasan, kualifikasi, dan tugas dari PRK? Perubahan manual pada tiga bagian tersebut akan diganti; benefit tidak berubah.')) return;
+    setLoadingPrkSource(true);
+    try {
+      const { data, error } = await db
+        .from('employee_requests')
+        .select('*')
+        .eq('linked_job_opening_id', editingId)
+        .is('trashed_at', null)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        alert('PRK terkait tidak ditemukan. Isi atau edit bagian lowongan secara manual.');
+        return;
+      }
+      const details = buildPublicJobDetails(data as EmployeeRequest);
+      setForm((current) => ({
+        ...current,
+        description: details.description,
+        qualifications: details.qualifications,
+        responsibilities: details.responsibilities,
+      }));
+      notifyPortal('Data PRK dimuat', 'Ringkasan, kualifikasi, dan tugas dapat diedit sebelum lowongan disimpan.');
+    } catch (error) {
+      alert('Gagal mengambil data PRK: ' + (error as Error).message);
+    } finally {
+      setLoadingPrkSource(false);
+    }
+  };
+
   const uploadFlyer = async (opening: JobOpening, file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Flyer harus berupa file gambar.'); return; }
@@ -199,7 +264,15 @@ export default function JobOpeningsAdminPage() {
           </p>
         ) : (
           <Card className="p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Edit Lowongan</h3>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-slate-900">Edit Lowongan</h3>
+                <p className="mt-1 text-xs text-slate-500">Data dapat diambil dari PRK lalu diedit, ditambah, atau dihapus sebelum disimpan.</p>
+              </div>
+              <Button variant="secondary" disabled={loadingPrkSource} onClick={() => void importFromPrk()}>
+                <RotateCcw className="mr-1.5 inline h-4 w-4" />{loadingPrkSource ? 'Mengambil data…' : 'Ambil otomatis dari PRK'}
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <Input label="Judul Posisi" value={form.title} onChange={(v) => setForm({ ...form, title: v })} required />
               <Input label="Divisi" value={form.division} onChange={(v) => setForm({ ...form, division: v })} required />
@@ -214,12 +287,37 @@ export default function JobOpeningsAdminPage() {
               />
               <Select label="Warna Kartu" value={form.colorLabel} onChange={(v) => setForm({ ...form, colorLabel: v })} options={COLOR_LABELS} />
             </div>
-            <div className="mb-4">
-              <TextArea
-                label="Kualifikasi (satu baris = satu poin)"
-                value={form.qualificationsText}
-                onChange={(v) => setForm({ ...form, qualificationsText: v })}
+            <div className="mb-4 space-y-4">
+              <PointListEditor
+                label="Tugas & tanggung jawab"
+                items={form.responsibilities}
+                onChange={(responsibilities) => setForm((current) => ({ ...current, responsibilities }))}
+                placeholder="Tuliskan satu tugas atau tanggung jawab"
+                addLabel="Tambah tugas"
+                emptyMessage="Belum ada tugas. Tambahkan manual atau ambil ulang dari PRK."
               />
+              <TextArea
+                label="Deskripsi singkat posisi"
+                value={form.description}
+                onChange={(v) => setForm({ ...form, description: v })}
+              />
+              <PointListEditor
+                label="Kualifikasi & persyaratan"
+                items={form.qualifications}
+                onChange={(qualifications) => setForm((current) => ({ ...current, qualifications }))}
+                placeholder="Tuliskan satu kualifikasi atau persyaratan"
+                addLabel="Tambah kualifikasi"
+                emptyMessage="Belum ada kualifikasi. Tambahkan manual atau ambil ulang dari PRK."
+              />
+              <PointListEditor
+                label="Benefit & fasilitas (opsional)"
+                items={form.benefits}
+                onChange={(benefits) => setForm((current) => ({ ...current, benefits }))}
+                placeholder="Contoh: BPJS Kesehatan dan Ketenagakerjaan"
+                addLabel="Tambah benefit"
+                emptyMessage="Benefit belum dicantumkan. Tambahkan hanya jika sudah dipastikan."
+              />
+              <p className="-mt-2 text-xs text-slate-500">Benefit diisi manual sesuai kebijakan yang benar-benar berlaku; bagian ini tidak diambil dari alasan internal PRK.</p>
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-6">
               <label className="flex items-center gap-2 text-sm text-slate-600">

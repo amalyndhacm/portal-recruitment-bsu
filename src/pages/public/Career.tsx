@@ -42,10 +42,34 @@ function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }
   );
 }
 
-function getHiringCount(job: JobOpening): number | null {
-  const requirement = job.qualifications.find((item) => /^Kebutuhan:\s*\d+\s*orang$/i.test(item));
-  const count = requirement?.match(/\d+/)?.[0];
-  return count ? Number(count) : null;
+function formatCareerDeadline(deadline: string) {
+  const date = new Date(`${deadline}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return deadline;
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function getJobDetailSections(job: JobOpening) {
+  const qualifications: string[] = [];
+  const responsibilities = [...(job.responsibilities || [])];
+
+  for (const rawItem of job.qualifications || []) {
+    const item = rawItem.trim();
+    if (!item) continue;
+    if (/^(?:Kebutuhan|Jumlah kebutuhan):\s*\d+\s*orang$/i.test(item)) continue;
+    if (/^Bertanggung jawab kepada:/i.test(item)) {
+      responsibilities.push(item.replace(/^Bertanggung jawab kepada:\s*/i, 'Lingkup tanggung jawab: '));
+    } else if (/^Tugas utama:/i.test(item)) {
+      responsibilities.push(item.replace(/^Tugas utama:\s*/i, ''));
+    } else {
+      qualifications.push(item);
+    }
+  }
+
+  return {
+    qualifications,
+    responsibilities: responsibilities.filter(Boolean),
+    benefits: (job.benefits || []).filter(Boolean),
+  };
 }
 
 export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, onCandidateAuthRequired }: { onNavigate: (page: PageKey) => void; onLoginClick: () => void; isAuthenticated: boolean; onCandidateAuthRequired: (jobId: string, action: 'register' | 'login') => void }) {
@@ -92,6 +116,7 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
   }, [loadingOpenings, highlightedJobId, selectedJob]);
 
   const activeOpenings = openings.filter((job) => job.isActive);
+  const selectedJobDetails = selectedJob ? getJobDetailSections(selectedJob) : null;
   const divisions = Array.from(new Set(activeOpenings.map((job) => job.division).filter(Boolean)));
   const locations = Array.from(new Set(activeOpenings.map((job) => job.location).filter(Boolean)));
   const filtered = activeOpenings.filter((job) => {
@@ -184,22 +209,50 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
             <div className="mx-auto grid max-w-7xl gap-8 px-5 pb-12 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)] lg:gap-12 lg:pt-8">
               <div className="order-2 recruitment-detail-zoom lg:order-1" style={{ animation: 'recruitment-detail-zoom 560ms cubic-bezier(.22,1,.36,1) both' }}>
                 <section>
-                  <h2 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">Persyaratan Pekerjaan</h2>
-                  {selectedJob.qualifications.length ? (
+                  <h2 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">Kualifikasi &amp; Persyaratan</h2>
+                  {selectedJobDetails?.qualifications.length ? (
                     <ul className="mt-4 space-y-2.5">
-                      {selectedJob.qualifications.map((qualification, index) => (
-                        <li key={`${selectedJob.id}-detail-${index}`} className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+                      {selectedJobDetails.qualifications.map((qualification, index) => (
+                        <li key={`${selectedJob.id}-qualification-${index}`} className="flex items-start gap-3 text-sm leading-6 text-slate-700">
                           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />{qualification}
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="mt-3 text-sm text-slate-500">Informasi persyaratan belum dicantumkan untuk lowongan ini.</p>}
+                  ) : <p className="mt-3 text-sm text-slate-500">Persyaratan untuk posisi ini belum dicantumkan.</p>}
                 </section>
 
                 <section className="mt-8 border-t border-slate-200 pt-6">
-                  <h2 className="font-display text-base font-bold text-slate-900">Tentang Posisi Ini</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">Posisi {selectedJob.title} berada di {selectedJob.division} dengan penempatan di {selectedJob.location}. Tinjau persyaratan di atas sebelum mengajukan lamaran.</p>
+                  <h2 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">Tugas &amp; Tanggung Jawab</h2>
+                  {selectedJobDetails?.responsibilities.length ? (
+                    <ul className="mt-4 space-y-2.5">
+                      {selectedJobDetails.responsibilities.map((item, index) => (
+                        <li key={`${selectedJob.id}-responsibility-${index}`} className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600" />{item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="mt-3 text-sm text-slate-500">Rincian tugas akan ditambahkan oleh tim Recruitment.</p>}
                 </section>
+
+                <section className="mt-8 border-t border-slate-200 pt-6">
+                  <h2 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">Ringkasan Posisi</h2>
+                  <p className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600 shadow-sm">
+                    {selectedJob.description?.trim() || `Kesempatan untuk bergabung sebagai ${selectedJob.title} di ${selectedJob.division}, dengan penempatan di ${selectedJob.location}.`}
+                  </p>
+                </section>
+
+                {selectedJobDetails && selectedJobDetails.benefits.length > 0 && (
+                  <section className="mt-8 border-t border-slate-200 pt-6">
+                    <h2 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">Benefit &amp; Fasilitas</h2>
+                    <ul className="mt-4 space-y-2.5">
+                      {selectedJobDetails.benefits.map((item, index) => (
+                        <li key={`${selectedJob.id}-benefit-${index}`} className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />{item}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
 
                 {activeOpenings.filter((job) => job.id !== selectedJob.id).length > 0 && (
                   <section className="mt-9">
@@ -284,14 +337,13 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
                         {paginatedOpenings.map((job, index) => {
                           const highlighted = highlightedJobId === job.id;
-                          const hiringCount = getHiringCount(job);
                           return (
                             <Reveal key={job.id} delay={index * 35}>
                               <button
                                 id={`job-opening-${job.id}`}
                                 type="button"
                                 onClick={() => setSelectedJob(job)}
-                                aria-label={`Detail lowongan: divisi ${job.division}, bagian ${job.title}, lokasi ${job.location}, jumlah dibuka ${hiringCount === null ? 'belum diinformasikan' : `${hiringCount} orang`}`}
+                                aria-label={`Detail lowongan: divisi ${job.division}, bagian ${job.title}, lokasi ${job.location}, batas lamaran ${formatCareerDeadline(job.deadline)}`}
                                 className={`group relative flex min-h-[220px] w-full scroll-mt-28 flex-col rounded-2xl border p-5 text-left transition duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100 ${highlighted ? 'border-brand-teal bg-white shadow-lg shadow-brand-teal/15 ring-4 ring-brand-teal/20' : 'border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.045)] hover:border-blue-200 hover:shadow-[0_14px_32px_rgba(30,64,175,0.10)]'}`}
                               >
                                 <span className="flex items-center justify-between gap-3">
@@ -302,8 +354,8 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                                 <span className="mt-1 block break-words font-display text-lg font-bold leading-7 text-slate-900 transition group-hover:text-blue-700">{job.title}</span>
                                 <span className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500"><MapPin size={15} className="shrink-0 text-blue-600" />{job.location || 'Belum diinformasikan'}</span>
                                 <span className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                                  <span className="text-xs font-medium text-slate-500">Jumlah Dibuka</span>
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 font-display text-sm font-bold text-blue-800"><Users size={14} className="text-blue-600" />{hiringCount === null ? 'Belum diinformasikan' : `${hiringCount} orang`}</span>
+                                  <span className="text-xs font-medium text-slate-500">Batas lamaran</span>
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 font-display text-sm font-bold text-blue-800"><CalendarClock size={14} className="text-blue-600" />{formatCareerDeadline(job.deadline)}</span>
                                 </span>
                               </button>
                             </Reveal>

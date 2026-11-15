@@ -1,4 +1,4 @@
-import { db } from '@/lib/database';
+import { db, type EmployeeRequest } from '@/lib/database';
 
 // ---------------------------------------------------------------------------
 // Lowongan sekarang disimpan di modul `job_openings` di Supabase, dikelola dari
@@ -13,13 +13,54 @@ export type JobOpening = {
   location: string;
   type: string;
   colorIndex: 0 | 1 | 2 | 3 | 4;
+  description: string;
   qualifications: string[];
+  responsibilities: string[];
+  benefits: string[];
   deadline: string;
   featured: boolean;
   isActive: boolean;
   flyerUrl: string | null;
   flyerName: string | null;
 };
+
+export function buildPublicJobDetails(request: EmployeeRequest) {
+  const value = (input: string | null | undefined) => input?.trim() || null;
+  const position = value(request.position_needed) || 'posisi ini';
+  const location = value(request.div_job_site) || 'lokasi penempatan';
+  const employmentStatus = value(request.employment_status);
+  const educationLevel = value(request.education_level);
+  const major = value(request.major);
+  const gender = value(request.gender);
+  const maritalStatus = value(request.marital_status);
+  const ageRequirement = value(request.age_requirement);
+  const workExperience = value(request.work_experience);
+  const specialSkill = value(request.special_skill);
+  const personalCharacteristics = value(request.personal_characteristics);
+  const additionalSkills = value(request.additional_skills);
+  const mainDuties = value(request.main_duties);
+  const responsibleTo = value(request.responsible_to);
+
+  return {
+    description: `Kami membuka kesempatan untuk posisi ${position} dengan penempatan di ${location}${employmentStatus ? ` dan status hubungan kerja ${employmentStatus.toLowerCase()}` : ''}.`,
+    qualifications: [
+      educationLevel ? `Pendidikan minimal: ${educationLevel}` : null,
+      major ? `Jurusan: ${major}` : null,
+      gender ? `Jenis kelamin: ${gender}` : null,
+      maritalStatus ? `Status perkawinan: ${maritalStatus}` : null,
+      ageRequirement ? `Batas usia: ${ageRequirement}` : null,
+      workExperience ? `Pengalaman kerja: ${workExperience}` : null,
+      specialSkill ? `Keahlian khusus: ${specialSkill}` : null,
+      personalCharacteristics ? `Karakteristik yang dicari: ${personalCharacteristics}` : null,
+      additionalSkills ? `Nilai tambah: ${additionalSkills}` : null,
+    ].filter(Boolean) as string[],
+    responsibilities: [
+      mainDuties,
+      responsibleTo ? `Lingkup tanggung jawab: ${responsibleTo}` : null,
+    ].filter(Boolean) as string[],
+    benefits: [] as string[],
+  };
+}
 
 type JobOpeningRow = {
   id: string;
@@ -28,7 +69,10 @@ type JobOpeningRow = {
   location: string;
   type: string;
   color_index: number;
+  description?: string | null;
   qualifications: string[];
+  responsibilities?: string[] | null;
+  benefits?: string[] | null;
   deadline: string;
   featured: boolean;
   is_active: boolean;
@@ -45,7 +89,10 @@ function mapRow(row: JobOpeningRow): JobOpening {
     location: row.location,
     type: row.type,
     colorIndex: ((row.color_index ?? 0) as 0 | 1 | 2 | 3 | 4),
+    description: row.description || '',
     qualifications: row.qualifications || [],
+    responsibilities: row.responsibilities || [],
+    benefits: row.benefits || [],
     deadline: row.deadline,
     featured: row.featured,
     isActive: row.is_active,
@@ -119,7 +166,10 @@ function toRow(input: JobOpeningInput) {
     location: input.location,
     type: input.type,
     color_index: input.colorIndex,
+    description: input.description,
     qualifications: input.qualifications,
+    responsibilities: input.responsibilities,
+    benefits: input.benefits,
     deadline: input.deadline,
     featured: input.featured,
     is_active: input.isActive,
