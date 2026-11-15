@@ -217,12 +217,12 @@ export default function RoleDashboardPage({ role, name, onNavigate }: { role: St
             <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">{config.welcome} {config.description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => onNavigate('rt-applicants')} className="inline-flex items-center gap-2 rounded-xl bg-[#c9f36b] px-4 py-2.5 text-sm font-bold text-[#102c2b] shadow-sm transition hover:bg-[#d8fa91]"><Users size={16} /> Review lamaran</button>
+          <button onClick={() => onNavigate('rt-applicants')} className="inline-flex items-center gap-2 rounded-xl bg-[#b7dec5] px-4 py-2.5 text-sm font-bold text-[#155e63] shadow-sm transition hover:bg-[#c7e8d2]"><Users size={16} /> Review lamaran</button>
             <button onClick={() => onNavigate('rt-job-openings')} className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"><Plus size={16} /> Kelola lowongan</button>
           </div>
         </div>
         <div className="relative mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-xs text-white/65">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-lime-300" /> Data tersinkron otomatis</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#a9d3b9]" /> Data tersinkron otomatis</span>
           <span>Prioritas hari ini: {newApplicationCount} lamaran baru</span>
           {nextInterview && <span>Agenda berikutnya: {formatDate(nextInterview.scheduled_date)} · {formatTime(nextInterview.scheduled_time)}</span>}
         </div>

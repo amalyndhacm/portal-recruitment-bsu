@@ -48,8 +48,8 @@ html.dark .dashboard-card, html.dark .card { background-color: #111827; border-c
       font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900;
   }
   .btn-primary {
-    @apply inline-flex items-center gap-1.5 rounded-xl bg-[#c9f36b] font-bold
-      text-[#102c2b] shadow-sm transition-all hover:bg-[#d8fa91] hover:shadow-md;
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-[#b7dec5] font-bold
+      text-[#155e63] shadow-sm transition-all hover:bg-[#c7e8d2] hover:shadow-md;
   }
 
   .input {

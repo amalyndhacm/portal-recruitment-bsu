@@ -362,8 +362,8 @@ export default function Layout({
                           onClick={() => handleNavigate(item.id)}
                           className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-200 ${
                             active
-                              ? 'bg-[#c9f36b] font-bold text-[#102c2b] shadow-sm'
-                              : 'text-slate-500 hover:bg-slate-50 hover:text-[#102c2b]'
+                              ? 'border border-[#c6e5d5] bg-[#e4f2e9] font-bold text-[#155e63] shadow-sm'
+                              : 'border border-transparent text-slate-500 hover:bg-[#f1f7f3] hover:text-[#126b78]'
                           }`}
                         >
                           {item.label}
