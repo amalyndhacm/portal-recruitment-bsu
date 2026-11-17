@@ -122,7 +122,7 @@ export default function PageHeader({
           </div>
           <div className="text-left">
             <p className="font-display text-sm font-bold leading-tight text-[#15343a]">Bintang Sayap Utama</p>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">People platform</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">BSU Career</p>
           </div>
         </button>
 

@@ -476,17 +476,6 @@ export default function HomePage({
               />
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#102e35]/75 via-[#102e35]/25 to-transparent" aria-hidden="true" />
-            <div className="absolute bottom-5 left-5 sm:bottom-8 sm:left-8">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/35 bg-gradient-to-br from-[#102e35]/75 to-[#102e35]/45 px-4 py-3 shadow-xl backdrop-blur-lg sm:px-5">
-                <span className="h-8 w-1 rounded-full bg-gradient-to-b from-[#8be0cb] to-[#49a99d] shadow-[0_0_12px_rgba(130,214,193,.45)]" />
-                <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/65">Nilai Kami</p>
-                  <p className="font-display mt-0.5 text-sm font-semibold tracking-wide text-white sm:text-base">Memberi yang Terbaik</p>
-                </div>
-              </div>
-            </div>
-
             <div className="absolute right-[-42px] top-7 z-10 flex w-44 rotate-45 items-center justify-center gap-2 border-y border-white/35 bg-gradient-to-r from-[#126b78] to-[#168476] px-3 py-2 shadow-[0_8px_24px_rgba(10,48,52,.35)]">
               <UserRound size={12} className="text-white/90" />
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white">Sejak 2012</p>

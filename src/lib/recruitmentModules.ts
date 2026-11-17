@@ -117,6 +117,43 @@ export type CandidateOffering = {
   job_applicants: Pick<JobApplicant, 'full_name' | 'position' | 'tracking_code' | 'status' | 'phone' | 'birth_place_date' | 'gender' | 'ktp_address' | 'domicile' | 'placement_area'> | null;
 };
 
+/** Buat satu record offering lengkap jika kandidat belum memilikinya. */
+export async function ensureCandidateOffering(applicant: Pick<JobApplicant, 'id' | 'position'>) {
+  const existing = await db
+    .from('candidate_offerings')
+    .select('id')
+    .eq('applicant_id', applicant.id)
+    .limit(1)
+    .maybeSingle();
+  if (existing.error) return { id: null, error: existing.error.message };
+  if (existing.data?.id) return { id: String(existing.data.id), error: null };
+
+  const { data, error } = await db.from('candidate_offerings').insert({
+    applicant_id: applicant.id,
+    offered_position: applicant.position,
+    employment_status: 'Kontrak',
+    offer_status: 'Draft',
+    offer_date: null,
+    response_deadline: null,
+    expected_start_date: null,
+    documents: [],
+    mcu_status: 'Belum',
+    mcu_date: null,
+    notes: null,
+    document_type: 'PKWT Jawa Timur',
+    document_data: {},
+    document_statuses: [],
+    selected_documents: [],
+    document_forms: {},
+    approval_status: 'Belum Diajukan',
+    approval_notes: null,
+    approved_at: null,
+  }).select('id').single();
+
+  if (error || !data?.id) return { id: null, error: error?.message || 'Record Offering tidak berhasil dibuat.' };
+  return { id: String(data.id), error: null };
+}
+
 // ----- Onboarding & Probation ---------------------------------------------
 
 export const ONBOARDING_CHECKLIST = [

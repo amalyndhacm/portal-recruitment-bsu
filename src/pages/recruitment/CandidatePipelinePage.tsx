@@ -5,7 +5,7 @@ import {
   APPLICANT_STATUSES,
   isInterviewTriggerStage,
 } from '@/lib/recruitment';
-import { daysBetween } from '@/lib/recruitmentModules';
+import { daysBetween, ensureCandidateOffering } from '@/lib/recruitmentModules';
 import InterviewScheduleModal from '@/components/recruitment/InterviewScheduleModal';
 import { PageHeader, Card, Badge, LoadingState, EmptyState } from '@/components/ui';
 import type { PageId } from '@/components/Layout';
@@ -73,23 +73,34 @@ export default function CandidatePipelinePage({ onNavigate }: { onNavigate?: (pa
     return map;
   }, [filtered]);
 
-  const updateStatus = async (applicant: JobApplicant, status: string) => {
+  const updateStatus = async (applicant: JobApplicant, status: string): Promise<boolean> => {
     const prev = items;
     setItems((list) => list.map((a) => (a.id === applicant.id ? { ...a, status, updated_at: new Date().toISOString() } : a)));
     const { error } = await db.from('job_applicants').update({ status }).eq('id', applicant.id);
     if (error) {
       setItems(prev);
       alert('Gagal memindahkan kandidat. Coba lagi.');
-      return;
+      return false;
     }
     notifyPortal('Tahap kandidat diperbarui', `${applicant.full_name} dipindahkan dari ${applicant.status} ke ${status}.`);
+    if (status === 'Offering') {
+      const result = await ensureCandidateOffering(applicant);
+      if (result.id) sessionStorage.setItem('portal-open-offering-id', result.id);
+      else alert(`Status kandidat tersimpan, tetapi proses Offering belum dibuat: ${result.error || 'coba buka Offering dan ulangi.'}`);
+    }
+    return true;
   };
 
   const moveTo = async (applicant: JobApplicant, target: string) => {
     if (applicant.status === target) return;
-    if (target === 'Offering' || target === 'Onboarding') {
-      await updateStatus(applicant, target);
-      onNavigate?.('rt-offering');
+    if (target === 'Offering') {
+      const saved = await updateStatus(applicant, target);
+      if (saved) onNavigate?.('rt-offering');
+      return;
+    }
+    if (target === 'Onboarding') {
+      const saved = await updateStatus(applicant, target);
+      if (saved) onNavigate?.('rt-onboarding');
       return;
     }
     if (isInterviewTriggerStage(target)) {

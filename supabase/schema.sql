@@ -24,7 +24,7 @@ create unique index if not exists portal_records_application_code_uq
 comment on table public.portal_records is
   'Penyimpanan kompatibilitas JSONB untuk modul Portal Recruitment. table_name adalah nama modul dan payload berisi kolom record.';
 
--- Role tidak diambil dari browser/user-editable metadata sebagai sumber otorisasi.
+-- Role staf tidak diambil dari browser/user-editable metadata.
 -- Role staf harus diaktifkan oleh administrator di public.portal_records.
 create or replace function public.portal_is_staff()
 returns boolean
@@ -45,6 +45,26 @@ as $$
 $$;
 revoke all on function public.portal_is_staff() from public;
 grant execute on function public.portal_is_staff() to anon, authenticated;
+
+-- Karyawan aktif yang masuk dengan alias NIP hanya mendapat akses RLS pada
+-- PRK dan lampirannya. Identitas diverifikasi lewat email Auth + master aktif,
+-- bukan user_metadata yang dapat diedit dari browser.
+create or replace function public.portal_is_active_employee()
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.employee_master e
+    where lower(trim(coalesce(e.status::text, ''))) = 'active'
+      and lower(coalesce(auth.jwt()->>'email', '')) in (
+        lower(trim(e.employee_id::text)) || '@bsu.co.id',
+        lower(trim(e.employee_id::text)) || '@portal.bsu.co.id'
+      )
+  );
+$$;
+revoke all on function public.portal_is_active_employee() from public;
+grant execute on function public.portal_is_active_employee() to anon, authenticated;
 
 create or replace function public.portal_candidate_owns_applicant(target_id text)
 returns boolean
@@ -204,6 +224,57 @@ drop policy if exists portal_records_delete on public.portal_records;
 create policy portal_records_delete on public.portal_records for delete to authenticated
 using (public.portal_is_staff());
 
+drop policy if exists portal_employee_prk_select on public.portal_records;
+create policy portal_employee_prk_select on public.portal_records for select to authenticated
+using (table_name = 'employee_requests' and public.portal_is_active_employee());
+drop policy if exists portal_employee_prk_insert on public.portal_records;
+create policy portal_employee_prk_insert on public.portal_records for insert to authenticated
+with check (table_name = 'employee_requests' and public.portal_is_active_employee());
+drop policy if exists portal_employee_prk_update on public.portal_records;
+create policy portal_employee_prk_update on public.portal_records for update to authenticated
+using (table_name = 'employee_requests' and public.portal_is_active_employee())
+with check (table_name = 'employee_requests' and public.portal_is_active_employee());
+
+-- Active NIP employees share the Recruitment workspace without receiving
+-- access to unrelated HR, Comben, or administrator records.
+drop policy if exists portal_active_employee_recruitment_manage on public.portal_records;
+create policy portal_active_employee_recruitment_manage
+on public.portal_records for all to authenticated
+using (
+  public.portal_is_active_employee()
+  and table_name in (
+    'job_openings',
+    'job_applicants',
+    'recruitment_activities',
+    'applicant_status_history',
+    'interview_schedules',
+    'candidate_assessments',
+    'candidate_offerings',
+    'candidate_onboardings',
+    'recruitment_sources',
+    'recruitment_recap',
+    'talent_pool_recap',
+    'message_templates'
+  )
+)
+with check (
+  public.portal_is_active_employee()
+  and table_name in (
+    'job_openings',
+    'job_applicants',
+    'recruitment_activities',
+    'applicant_status_history',
+    'interview_schedules',
+    'candidate_assessments',
+    'candidate_offerings',
+    'candidate_onboardings',
+    'recruitment_sources',
+    'recruitment_recap',
+    'talent_pool_recap',
+    'message_templates'
+  )
+);
+
 -- Private-by-default buckets: home gallery and job flyers are public-read; uploads/deletes require a staff role.
 insert into storage.buckets (id, name, public)
 values ('home-gallery', 'home-gallery', true), ('prk-documents', 'prk-documents', false), ('job-flyers', 'job-flyers', true)
@@ -215,13 +286,33 @@ using (bucket_id in ('home-gallery', 'job-flyers'));
 drop policy if exists portal_staff_prk_media_read on storage.objects;
 create policy portal_staff_prk_media_read on storage.objects for select to authenticated
 using (public.portal_is_staff() and bucket_id = 'prk-documents');
+drop policy if exists portal_employee_prk_media_read on storage.objects;
+create policy portal_employee_prk_media_read on storage.objects for select to authenticated
+using (public.portal_is_active_employee() and bucket_id = 'prk-documents');
 drop policy if exists portal_staff_media_insert on storage.objects;
 create policy portal_staff_media_insert on storage.objects for insert to authenticated
 with check (public.portal_is_staff() and bucket_id in ('home-gallery', 'prk-documents', 'job-flyers'));
+drop policy if exists portal_employee_prk_media_insert on storage.objects;
+create policy portal_employee_prk_media_insert on storage.objects for insert to authenticated
+with check (public.portal_is_active_employee() and bucket_id = 'prk-documents');
 drop policy if exists portal_staff_media_update on storage.objects;
 create policy portal_staff_media_update on storage.objects for update to authenticated
 using (public.portal_is_staff() and bucket_id in ('home-gallery', 'prk-documents', 'job-flyers'))
 with check (public.portal_is_staff() and bucket_id in ('home-gallery', 'prk-documents', 'job-flyers'));
+drop policy if exists portal_employee_prk_media_update on storage.objects;
+create policy portal_employee_prk_media_update on storage.objects for update to authenticated
+using (public.portal_is_active_employee() and bucket_id = 'prk-documents')
+with check (public.portal_is_active_employee() and bucket_id = 'prk-documents');
+drop policy if exists portal_active_employee_job_flyers_insert on storage.objects;
+create policy portal_active_employee_job_flyers_insert on storage.objects for insert to authenticated
+with check (public.portal_is_active_employee() and bucket_id = 'job-flyers');
+drop policy if exists portal_active_employee_job_flyers_update on storage.objects;
+create policy portal_active_employee_job_flyers_update on storage.objects for update to authenticated
+using (public.portal_is_active_employee() and bucket_id = 'job-flyers')
+with check (public.portal_is_active_employee() and bucket_id = 'job-flyers');
+drop policy if exists portal_active_employee_job_flyers_delete on storage.objects;
+create policy portal_active_employee_job_flyers_delete on storage.objects for delete to authenticated
+using (public.portal_is_active_employee() and bucket_id = 'job-flyers');
 drop policy if exists portal_staff_media_delete on storage.objects;
 create policy portal_staff_media_delete on storage.objects for delete to authenticated
 using (public.portal_is_staff() and bucket_id in ('home-gallery', 'prk-documents', 'job-flyers'));

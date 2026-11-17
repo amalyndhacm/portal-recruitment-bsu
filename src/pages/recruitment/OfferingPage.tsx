@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileSignature, Trash2, Send, FileWarning, Handshake } from 'lucide-react';
-import { db } from '@/lib/database';
+import { db, type JobApplicant } from '@/lib/database';
 import {
   OFFER_DOCUMENT_TYPES,
   OFFER_STATUSES,
   OFFER_STATUS_COLORS,
   PRE_EMPLOYMENT_DOCUMENTS,
-  fetchApplicantsLite,
+  ensureCandidateOffering,
   type ApplicantLite,
   type CandidateOffering,
 } from '@/lib/recruitmentModules';
@@ -34,21 +34,48 @@ export default function OfferingPage() {
   const [items, setItems] = useState<CandidateOffering[]>([]);
   const [applicants, setApplicants] = useState<ApplicantLite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState('Semua');
   const [selectedOfferingId, setSelectedOfferingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const [offerings, list] = await Promise.all([
+    setLoadError('');
+    const [offerings, candidates] = await Promise.all([
       db
         .from('candidate_offerings')
-        .select('*, job_applicants(full_name, position, tracking_code, status, phone, birth_place_date, gender, ktp_address, domicile, placement_area)')
+        .select('*')
         .order('created_at', { ascending: false }),
-      fetchApplicantsLite(),
+      db.from('job_applicants').select('*').order('created_at', { ascending: false }),
     ]);
-    setItems((offerings.data || []) as CandidateOffering[]);
-    setApplicants(list);
+    if (offerings.error || candidates.error) {
+      setLoadError(offerings.error?.message || candidates.error?.message || 'Data Offering tidak dapat dimuat.');
+      setLoading(false);
+      return;
+    }
+
+    const candidateRows = (candidates.data || []) as JobApplicant[];
+    const applicantsById = new Map(candidateRows.map((candidate) => [candidate.id, candidate]));
+    const normalizedOfferings = ((offerings.data || []) as CandidateOffering[]).map((offering) => ({
+      ...offering,
+      offer_status: offering.offer_status || 'Draft',
+      employment_status: offering.employment_status || 'Kontrak',
+      documents: Array.isArray(offering.documents) ? offering.documents : [],
+      mcu_status: offering.mcu_status || 'Belum',
+      document_statuses: Array.isArray(offering.document_statuses) ? offering.document_statuses : [],
+      selected_documents: Array.isArray(offering.selected_documents) ? offering.selected_documents : [],
+      document_forms: offering.document_forms && typeof offering.document_forms === 'object' ? offering.document_forms : {},
+      job_applicants: applicantsById.get(offering.applicant_id) || null,
+    }));
+    setItems(normalizedOfferings);
+    setApplicants(candidateRows as ApplicantLite[]);
+
+    const openId = sessionStorage.getItem('portal-open-offering-id');
+    if (openId && normalizedOfferings.some((offering) => offering.id === openId)) {
+      setSelectedOfferingId(openId);
+      sessionStorage.removeItem('portal-open-offering-id');
+    }
     setLoading(false);
   };
 
@@ -69,7 +96,7 @@ export default function OfferingPage() {
   const stats = useMemo(() => {
     const waiting = items.filter((o) => o.offer_status === 'Terkirim' || o.offer_status === 'Negosiasi').length;
     const accepted = items.filter((o) => o.offer_status === 'Diterima');
-    const incomplete = accepted.filter((o) => o.documents.length < PRE_EMPLOYMENT_DOCUMENTS.length || o.mcu_status !== 'Lulus').length;
+    const incomplete = accepted.filter((o) => (o.documents || []).length < PRE_EMPLOYMENT_DOCUMENTS.length || o.mcu_status !== 'Lulus').length;
     return { total: items.length, waiting, accepted: accepted.length, incomplete };
   }, [items]);
 
@@ -114,23 +141,14 @@ export default function OfferingPage() {
 
   const prepareOfferingFor = async (applicant: ApplicantLite) => {
     setSaving(true);
-    const { data, error } = await db.from('candidate_offerings').insert({
-      applicant_id: applicant.id,
-      offered_position: applicant.position,
-      employment_status: 'Kontrak',
-      document_type: 'PKWT Jawa Timur',
-      document_data: {},
-      document_statuses: [],
-      selected_documents: [],
-      document_forms: {},
-    }).select('id').single();
+    const result = await ensureCandidateOffering(applicant);
     setSaving(false);
-    if (error || !data) {
-      alert('Gagal memulai proses offering. Pastikan migration database terbaru sudah dijalankan.');
+    if (result.error || !result.id) {
+      alert(`Gagal memulai proses offering: ${result.error || 'data tidak lengkap'}`);
       return;
     }
     await load();
-    setSelectedOfferingId(data.id);
+    setSelectedOfferingId(result.id);
     notifyPortal('Offering dimulai', `Proses offering untuk ${applicant.full_name} telah dibuat.`);
   };
 
@@ -170,16 +188,18 @@ export default function OfferingPage() {
         ))}
       </div>
 
-      {offeringApplicants.length > 0 && (
+          {offeringApplicants.length > 0 && (
         <Card className="mb-6 border-sky-200 bg-sky-50/50 p-5">
-          <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-semibold text-sky-950">Kandidat siap diproses Offering</h3><p className="mt-1 text-xs text-sky-800">Kandidat berstatus Offering otomatis masuk ke sini. Satu proses akan menyiapkan keenam dokumen kerja.</p></div><Badge text={`${offeringApplicants.length} kandidat`} color="sky" /></div>
+          <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-semibold text-sky-950">Kandidat siap diproses Offering</h3><p className="mt-1 text-xs text-sky-800">Kandidat berstatus Offering muncul otomatis. Pilih dan isi dokumen PKWT, PKWTT, atau surat pernyataan yang diperlukan.</p></div><Badge text={`${offeringApplicants.length} kandidat`} color="sky" /></div>
           <div className="divide-y divide-sky-100 rounded-xl border border-sky-100 bg-white">
             {offeringApplicants.map((applicant) => <div key={applicant.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"><div><p className="text-sm font-semibold text-slate-900">{applicant.full_name}</p><p className="text-xs text-slate-500">{applicant.position} · {applicant.tracking_code}</p></div><Button disabled={saving} onClick={() => prepareOfferingFor(applicant)}>{saving ? 'Membuka...' : 'Mulai Proses Offering'}</Button></div>)}
           </div>
         </Card>
       )}
 
-      {loading ? (
+      {loadError ? (
+        <Card className="p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold text-red-700">Data Offering tidak dapat dimuat</h3><p className="mt-1 text-sm text-slate-600">{loadError}</p></div><Button variant="secondary" onClick={load}>Coba lagi</Button></div></Card>
+      ) : loading ? (
         <LoadingState />
       ) : filtered.length === 0 ? (
         <Card className="p-6">
@@ -216,11 +236,12 @@ function OfferingCard({
   const [documentForms, setDocumentForms] = useState<Record<string, Record<string, string>>>(o.document_forms || {});
   const [activeDocument, setActiveDocument] = useState<string | null>(null);
   const [documentDraft, setDocumentDraft] = useState<Record<string, string>>({});
-  const docsDone = o.documents.length;
+  const documents = Array.isArray(o.documents) ? o.documents : [];
+  const docsDone = documents.length;
   const docsTotal = PRE_EMPLOYMENT_DOCUMENTS.length;
 
   const toggleDoc = (doc: string) => {
-    const next = o.documents.includes(doc) ? o.documents.filter((d) => d !== doc) : [...o.documents, doc];
+    const next = documents.includes(doc) ? documents.filter((d) => d !== doc) : [...documents, doc];
     onPatch(o.id, { documents: next });
   };
 
@@ -301,7 +322,7 @@ function OfferingCard({
             <label key={doc} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
-                checked={o.documents.includes(doc)}
+                checked={documents.includes(doc)}
                 onChange={() => toggleDoc(doc)}
                 className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
               />

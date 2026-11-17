@@ -18,7 +18,7 @@ import PageHeader, { type PageKey } from '@/pages/public/PageHeader';
 import PageFooter from '@/pages/public/PageFooter';
 
 // ---------------------------------------------------------------------------
-// Halaman ini menampung konten Tentang Kami, Legalitas, Visi/Misi,
+// Halaman ini menampung konten Tentang Kami, Profil Bisnis, Visi/Misi,
 // Budaya Perusahaan, Layanan, dan Jajaran Direksi.
 // ---------------------------------------------------------------------------
 
@@ -57,19 +57,17 @@ const VALUES = [
   },
 ];
 
-const MILESTONES = [
-  { year: 'SIUP', desc: 'Surat Izin Usaha Perdagangan (SIUP) Besar No. 180/0018/SIUP.B/421.302/2013, 7 Maret 2013.' },
-  { year: 'Badan Hukum', desc: 'Pengesahan Badan Hukum Perseroan No. AHU-35558.AH.01.01 Tahun 2012, 29 Juni 2012.' },
-  { year: 'TDP', desc: 'Tanda Daftar Perusahaan (TDP) No. 132515101065, 8 Maret 2013.' },
-  { year: 'NPWP', desc: 'Nomor Pokok Wajib Pajak (NPWP): 31.512.686.2.654.000.' },
+const BUSINESS_PROFILE = [
+  { label: 'Bidang Usaha', value: 'Distribusi produk hasil tembakau' },
+  { label: 'Cakupan Distribusi', value: 'Jaringan distribusi lebih dari 40 kota di Indonesia' },
+  { label: 'Bagian dari Grup', value: 'Gudang Baru Group' },
+  { label: 'Kedudukan', value: 'Kepanjen, Kabupaten Malang, Jawa Timur' },
 ];
 
 const SERVICES = [
-  'Distribusi produk hasil tembakau dengan jaringan lebih dari 40 kota di Indonesia',
-  'Bagian dari Gudang Baru Group bersama PT Gudang Baru Berkah, PT Bintang Sayap Insan, PT Berca Sauti Tobacco, dan PT Harmoni Berkah Saman',
   'Struktur organisasi jenjang jelas: Marketing, Accounting & Finance, Human Resources, dan Internal Control',
   'Didukung 1.598 pegawai (per Mei 2026) yang tersebar di kantor pusat dan seluruh ASO cabang',
-  'Legalitas usaha lengkap: SIUP Besar, Pengesahan Badan Hukum, TDP, dan NPWP',
+  'Menyediakan jasa pelayanan jaringan terpadu dalam mata rantai penyediaan produk berkualitas',
 ];
 
 const DIREKSI = [
@@ -245,10 +243,8 @@ export default function CompanyProfilePage({
                 masyarakat.
               </p>
               <p className="mt-4 text-slate-500">
-                PT Bintang Sayap Utama didirikan berdasarkan Akta Nomor 19 tanggal 14 April 2012 oleh
-                Notaris Diah Aju Wisnuwardhani, SH, M.Hum di Malang. Seiring berjalannya waktu, PT Bintang
-                Sayap Utama telah memantapkan diri sebagai perusahaan distribusi nasional terkemuka dalam
-                memberikan jasa pelayanan jaringan terpadu mata rantai penyediaan produk berkualitas.
+                Didirikan pada 2012, PT Bintang Sayap Utama berkembang sebagai perusahaan distribusi
+                nasional dengan jaringan terpadu untuk mendukung penyediaan produk berkualitas.
               </p>
               <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
                 &ldquo;Menjadi yang Terbaik&rdquo;
@@ -256,20 +252,22 @@ export default function CompanyProfilePage({
             </Reveal>
           </div>
 
-          <Reveal delay={150} className="mt-14">
-            <p className="mb-5 text-sm font-semibold text-slate-700">Legalitas Perusahaan</p>
-            <ol className="grid gap-6 border-t border-slate-200 pt-10 sm:grid-cols-2 lg:grid-cols-4">
-              {MILESTONES.map((m, i) => (
-                <li key={m.year} className="relative pl-6">
-                  <span
-                    className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: WINGS[i % WINGS.length].hex }}
-                  />
-                  <p className="font-display text-sm font-bold text-slate-900">{m.year}</p>
-                  <p className="mt-1 text-sm text-slate-500">{m.desc}</p>
-                </li>
+          <Reveal delay={150} className="mt-14 rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Profil Bisnis</p>
+            <h2 className="font-display mt-2 text-2xl font-bold text-slate-900">Distribusi Nasional, Jaringan Terpadu</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+              PT Bintang Sayap Utama berfokus pada distribusi produk hasil tembakau dan menjadi bagian
+              dari Gudang Baru Group. Perusahaan berkedudukan di Kepanjen, Kabupaten Malang, Jawa Timur.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {BUSINESS_PROFILE.map((item, index) => (
+                <article key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <span className="mb-3 block h-1 w-10 rounded-full" style={{ backgroundColor: WINGS[index % WINGS.length].hex }} />
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
+                  <p className="mt-2 text-sm font-semibold leading-5 text-slate-800">{item.value}</p>
+                </article>
               ))}
-            </ol>
+            </div>
           </Reveal>
         </div>
       </section>
@@ -357,12 +355,11 @@ export default function CompanyProfilePage({
             </Reveal>
 
             <Reveal from="right" delay={100} className="order-1 lg:order-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Profil Bisnis</p>
-              <h2 className="font-display mt-2 text-2xl font-bold text-slate-900">Distribusi Nasional, Jaringan Terpadu</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Jaringan &amp; Operasional</p>
+              <h2 className="font-display mt-2 text-2xl font-bold text-slate-900">Layanan dan Organisasi yang Mendukung</h2>
               <p className="mt-4 text-slate-500">
-                Sebagai bagian dari Gudang Baru Group, PT Bintang Sayap Utama memantapkan diri sebagai
-                perusahaan distribusi nasional terkemuka dalam melayani jaringan terpadu mata rantai
-                penyediaan produk berkualitas.
+                Kegiatan distribusi didukung struktur organisasi yang jelas dan tim operasional yang
+                tersebar di kantor pusat serta jaringan cabang.
               </p>
               <ul className="mt-6 space-y-3">
                 {SERVICES.map((s, i) => (

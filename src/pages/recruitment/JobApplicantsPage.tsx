@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { db, type JobApplicant } from '@/lib/database';
 import { APPLICANT_STATUSES, APPLICANT_STATUS_COLORS, APPLICANT_TIMELINE_STAGES, isInterviewTriggerStage } from '@/lib/recruitment';
 import InterviewScheduleModal from '@/components/recruitment/InterviewScheduleModal';
+import { ensureCandidateOffering } from '@/lib/recruitmentModules';
 import { PageHeader, Card, Button, Badge, LoadingState, EmptyState } from '@/components/ui';
 import type { PageId } from '@/components/Layout';
 import { notifyPortal } from '@/lib/portalNotifications';
@@ -105,9 +106,14 @@ export default function JobApplicantsPage({ onNavigate }: { onNavigate?: (page: 
   }, [items]);
 
   const updateStatus = async (applicant: JobApplicant, status: string) => {
-    if (status === 'Offering' || status === 'Onboarding') {
-      await applyStatusChange(applicant, status);
-      onNavigate?.('rt-offering');
+    if (status === 'Offering') {
+      const saved = await applyStatusChange(applicant, status);
+      if (saved) onNavigate?.('rt-offering');
+      return;
+    }
+    if (status === 'Onboarding') {
+      const saved = await applyStatusChange(applicant, status);
+      if (saved) onNavigate?.('rt-onboarding');
       return;
     }
     if (isInterviewTriggerStage(status)) {
@@ -117,7 +123,7 @@ export default function JobApplicantsPage({ onNavigate }: { onNavigate?: (page: 
     await applyStatusChange(applicant, status);
   };
 
-  const applyStatusChange = async (applicant: JobApplicant, status: string) => {
+  const applyStatusChange = async (applicant: JobApplicant, status: string): Promise<boolean> => {
     setSavingId(applicant.id);
     const prev = items;
     // update optimis di tampilan supaya terasa responsif, dikembalikan lagi
@@ -130,10 +136,16 @@ export default function JobApplicantsPage({ onNavigate }: { onNavigate?: (page: 
       setItems(prev);
       setDetail((current) => (current?.id === applicant.id ? applicant : current));
       alert('Gagal menyimpan perubahan status. Coba lagi.');
-      return;
+      return false;
     }
     notifyPortal('Status kandidat diperbarui', `${applicant.full_name} dipindahkan dari ${applicant.status} ke ${status}.`);
-    load();
+    if (status === 'Offering') {
+      const result = await ensureCandidateOffering(applicant);
+      if (result.id) sessionStorage.setItem('portal-open-offering-id', result.id);
+      else alert(`Status kandidat tersimpan, tetapi proses Offering belum dibuat: ${result.error || 'coba buka Offering dan ulangi.'}`);
+    }
+    void load();
+    return true;
   };
 
   const saveNotes = async (applicant: JobApplicant, notes: string) => {
