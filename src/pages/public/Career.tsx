@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BriefcaseBusiness, Building2, CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, Users } from 'lucide-react';
+import { ArrowLeft, BriefcaseBusiness, Building2, CalendarClock, Check, ChevronLeft, ChevronRight, Copy, MapPin, Search, Users } from 'lucide-react';
 import ChatbotWidget from '@/components/dashboard/ChatbotWidget';
 import JobApplicationForm from '@/components/recruitment/JobApplicationForm';
 import PageHeader, { type PageKey } from '@/pages/public/PageHeader';
@@ -76,6 +76,7 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
   const [authPromptJob, setAuthPromptJob] = useState<JobOpening | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
+  const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
   const [openings, setOpenings] = useState<JobOpening[]>([]);
   const [loadingOpenings, setLoadingOpenings] = useState(true);
   const [query, setQuery] = useState('');
@@ -85,7 +86,7 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const targetId = sessionStorage.getItem('portal-highlight-job-id');
+      const targetId = sessionStorage.getItem('portal-highlight-job-id');
     if (targetId) {
       setHighlightedJobId(targetId);
       sessionStorage.removeItem('portal-highlight-job-id');
@@ -105,8 +106,23 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
         const target = data.find((job) => job.id === targetId);
         if (target?.isActive) setSelectedJob(target);
       }
+      const sharedJobId = new URLSearchParams(window.location.search).get('lowongan');
+      if (sharedJobId) {
+        const sharedJob = data.find((job) => job.id === sharedJobId);
+        if (sharedJob) setSelectedJob(sharedJob);
+      }
     });
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const syncDetailFromUrl = () => {
+      const sharedJobId = new URLSearchParams(window.location.search).get('lowongan');
+      const sharedJob = sharedJobId ? openings.find((job) => job.id === sharedJobId) : null;
+      setSelectedJob(sharedJob || null);
+    };
+    window.addEventListener('popstate', syncDetailFromUrl);
+    return () => window.removeEventListener('popstate', syncDetailFromUrl);
+  }, [openings]);
 
   useEffect(() => {
     if (!loadingOpenings && highlightedJobId && !selectedJob) {
@@ -133,9 +149,35 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
     setCurrentPage(1);
   }, [query, division, location]);
 
+  const updateSharedJobUrl = (jobId?: string) => {
+    const url = new URL(window.location.href);
+    if (jobId) url.searchParams.set('lowongan', jobId);
+    else url.searchParams.delete('lowongan');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  const openJobDetail = (job: JobOpening) => {
+    updateSharedJobUrl(job.id);
+    setSelectedJob(job);
+  };
+
   const returnToListings = () => {
+    updateSharedJobUrl();
     setSelectedJob(null);
     setHighlightedJobId(null);
+  };
+
+  const copyJobLink = async (jobId: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('lowongan', jobId);
+    const link = url.toString();
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedJobId(jobId);
+      window.setTimeout(() => setCopiedJobId((current) => current === jobId ? null : current), 2500);
+    } catch {
+      window.prompt('Salin tautan detail lowongan ini:', link);
+    }
   };
 
   const startApplication = (job: JobOpening) => {
@@ -184,9 +226,20 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
             <div className="pointer-events-none absolute right-[24%] top-24 h-3 w-3 rounded-full bg-sky-100/40" />
             <div className="pointer-events-none absolute bottom-20 left-[8%] h-20 w-20 rounded-full border border-white/10" />
             <div className="relative mx-auto max-w-7xl px-5 pb-20 pt-8 sm:px-8 sm:pb-24 sm:pt-10">
-              <button type="button" onClick={returnToListings} className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-100 transition hover:text-white sm:text-sm">
-                <ArrowLeft size={15} /> Lowongan <ChevronRight size={13} /> {selectedJob.title}
-              </button>
+              <div className="flex items-center justify-between gap-4">
+                <button type="button" onClick={returnToListings} className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-blue-100 transition hover:text-white sm:text-sm">
+                  <ArrowLeft size={15} className="shrink-0" /> <span>Lowongan</span> <ChevronRight size={13} className="shrink-0" /> <span className="truncate">{selectedJob.title}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void copyJobLink(selectedJob.id)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-blue-100/65 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  aria-live="polite"
+                >
+                  {copiedJobId === selectedJob.id ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedJobId === selectedJob.id ? 'Tersalin' : 'Bagikan'}
+                </button>
+              </div>
               <p className="mt-7 text-[10px] font-bold uppercase tracking-[0.24em] text-sky-100/80 sm:text-xs">Detail Lowongan</p>
               <h1 className="mt-2 max-w-3xl font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">{selectedJob.title}</h1>
               <div className="mt-5 flex flex-wrap gap-2.5 text-xs text-blue-50 sm:text-sm">
@@ -194,11 +247,11 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-sm"><MapPin size={15} className="text-amber-300" />{selectedJob.location}</span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-sm"><CalendarClock size={15} className="text-amber-300" />{selectedJob.type}</span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-sm"><CalendarClock size={15} className="text-amber-300" />Berlaku hingga {selectedJob.deadline}</span>
-                <span className="inline-flex items-center rounded-full border border-emerald-200/20 bg-emerald-300/15 px-3 py-2 text-xs font-semibold text-emerald-100">Sedang dibuka</span>
+                <span className={`inline-flex items-center rounded-full border px-3 py-2 text-xs font-semibold ${selectedJob.isActive ? 'border-emerald-200/20 bg-emerald-300/15 text-emerald-100' : 'border-rose-200/20 bg-rose-300/15 text-rose-100'}`}>{selectedJob.isActive ? 'Sedang dibuka' : 'Lowongan ditutup'}</span>
               </div>
-              <button type="button" onClick={() => startApplication(selectedJob)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-800 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30">
+              {selectedJob.isActive && <button type="button" onClick={() => startApplication(selectedJob)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-800 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30">
                 Daftar Sekarang <ChevronRight size={16} />
-              </button>
+              </button>}
             </div>
             <svg className="pointer-events-none absolute bottom-0 left-0 block h-16 w-full sm:h-20 lg:h-24" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true">
               <path d="M0 38 C260 100 520 96 760 55 C1010 10 1220 12 1440 52 L1440 100 L0 100 Z" fill="#f8fafc" stroke="#f8fafc" strokeWidth="2" strokeLinejoin="round" />
@@ -259,7 +312,7 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                     <h2 className="font-display text-xl font-bold text-slate-900">Lihat Lowongan Lainnya</h2>
                     <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
                       {activeOpenings.filter((job) => job.id !== selectedJob.id).slice(0, 4).map((job) => (
-                        <button key={job.id} type="button" onClick={() => setSelectedJob(job)} className="flex w-full items-center justify-between gap-4 py-4 text-left transition hover:text-blue-700">
+                        <button key={job.id} type="button" onClick={() => openJobDetail(job)} className="flex w-full items-center justify-between gap-4 py-4 text-left transition hover:text-blue-700">
                           <span>
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-700">{job.division}</span>
                             <span className="mt-1 block font-display text-sm font-bold text-slate-900">{job.title}</span>
@@ -339,16 +392,17 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                           const highlighted = highlightedJobId === job.id;
                           return (
                             <Reveal key={job.id} delay={index * 35}>
+                              <div className="relative">
                               <button
                                 id={`job-opening-${job.id}`}
                                 type="button"
-                                onClick={() => setSelectedJob(job)}
+                                onClick={() => openJobDetail(job)}
                                 aria-label={`Detail lowongan: divisi ${job.division}, bagian ${job.title}, lokasi ${job.location}, batas lamaran ${formatCareerDeadline(job.deadline)}`}
                                 className={`group relative flex min-h-[220px] w-full scroll-mt-28 flex-col rounded-2xl border p-5 text-left transition duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100 ${highlighted ? 'border-brand-teal bg-white shadow-lg shadow-brand-teal/15 ring-4 ring-brand-teal/20' : 'border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.045)] hover:border-blue-200 hover:shadow-[0_14px_32px_rgba(30,64,175,0.10)]'}`}
                               >
                                 <span className="flex items-center justify-between gap-3">
                                   <span className="inline-flex max-w-[calc(100%-3rem)] items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600"><Building2 size={14} className="shrink-0 text-blue-600" /><span className="truncate">{job.division || 'Belum diinformasikan'}</span></span>
-                                  <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition group-hover:bg-blue-600 group-hover:text-white"><ChevronRight size={16} /></span>
+                                  <span aria-hidden="true" className="h-8 w-8 shrink-0" />
                                 </span>
                                 <span className="mt-4 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Bagian / Posisi</span>
                                 <span className="mt-1 block break-words font-display text-lg font-bold leading-7 text-slate-900 transition group-hover:text-blue-700">{job.title}</span>
@@ -358,6 +412,7 @@ export default function CareerPage({ onNavigate, onLoginClick, isAuthenticated, 
                                   <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 font-display text-sm font-bold text-blue-800"><CalendarClock size={14} className="text-blue-600" />{formatCareerDeadline(job.deadline)}</span>
                                 </span>
                               </button>
+                              </div>
                             </Reveal>
                           );
                         })}
