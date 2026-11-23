@@ -73,7 +73,9 @@ export default function App() {
   const [page, setPage] = useState<PageId>('candidate-dashboard');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('portal-theme') === 'dark');
   const [notificationState, setNotificationState] = useState<{ scope: string; items: AppNotification[] }>({ scope: '', items: [] });
-  const [publicView, setPublicView] = useState<PublicView>('home');
+  const [publicView, setPublicView] = useState<PublicView>(() =>
+    new URLSearchParams(window.location.search).has('lowongan') ? 'career' : 'home',
+  );
   const [showPublicHome, setShowPublicHome] = useState(false);
   const [authNotice, setAuthNotice] = useState('');
   const [loginRole, setLoginRole] = useState<LoginRole | null>(() => {

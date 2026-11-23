@@ -386,15 +386,12 @@ export default function HomePage({
               <Sparkles size={14} className="animate-pulse" /> Portal Resmi BSU Career
             </span>
             <h1 className="font-display mt-6 max-w-xl text-4xl font-semibold leading-[1.1] tracking-[-0.035em] text-[#142f35] md:text-[3.6rem]">
-  Berkomitmen selalu{' '}
-  <span className="text-[#16766d]">memberi</span>{' '}
-  <span className="text-[#16766d]">
-    yang terbaik
-  </span>
-</h1>
+              Temukan{' '}
+              <span className="text-[#16766d]">Peluang Karier Anda</span>
+            </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-slate-500">
-              PT Bintang Sayap Utama — bagian dari Gudang Baru Group — menghimpun HR, distribusi, dan
-              produksi dalam satu ekosistem. &ldquo;Menjadi yang Terbaik&rdquo; sejak 2012.
+              Jelajahi lowongan terbaru di PT Bintang Sayap Utama dan temukan posisi yang sesuai
+              dengan kompetensi serta pengalaman Anda. Ajukan lamaran secara langsung melalui BSU Career.
             </p>
           <div className="mt-6 w-full max-w-lg">
             <div className="mb-3 flex items-center justify-between gap-4">
