@@ -24,6 +24,7 @@ import { normalizePortalRole } from '@/lib/accessControl';
 
 export type PageId =
   | 'rt-dashboard'
+  | 'training-dashboard'
   | 'candidate-dashboard'
   | 'candidate-positions'
   | 'candidate-applications'
@@ -104,6 +105,15 @@ const navSections: NavSection[] = [
       { id: 'rt-analytics', label: 'Analitik Rekrutmen', group: 'Laporan' },
       { id: 'rt-recruitment-recap', label: 'Rekap Rekrutmen', group: 'Laporan' },
       { id: 'rt-gallery', label: 'Galeri', group: 'Laporan' },
+    ],
+  },
+  {
+    title: 'Training',
+    icon: GraduationCap,
+    items: [
+      { id: 'training-dashboard', label: 'Dashboard Training' },
+      { id: 'rt-training', label: 'Data Pelatihan' },
+      { id: 'rt-training-recap', label: 'Rekap Training' },
     ],
   },
   {
@@ -239,9 +249,7 @@ export default function Layout({
   const displayUser: LayoutUser = user ?? { name: 'Pengguna', role: 'Karyawan' };
   const normalizedAccess = normalizePortalRole(accessLevel);
   const isRecruitmentWorkspace = normalizedAccess === 'recruitment'
-    || normalizedAccess === 'training'
-    || currentPage.startsWith('rt-')
-    || /recruitment|rekrutmen/i.test(displayUser.role);
+    || (normalizedAccess !== 'training' && (currentPage.startsWith('rt-') || /recruitment|rekrutmen/i.test(displayUser.role)));
   const initials =
     displayUser.initials ??
     displayUser.name
@@ -331,6 +339,7 @@ export default function Layout({
           {navSections.filter((section) => {
             const role = normalizedAccess;
             if (role === 'super_admin' || role === 'admin' || role === 'atasan') return true;
+            if (role === 'training') return section.title === 'Training';
             if (isRecruitmentWorkspace) return section.title === 'Recruitment';
             if (role === 'hr') return section.title === 'HR';
             if (role === 'comben') return section.title === 'Compensation & Benefit';

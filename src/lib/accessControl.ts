@@ -26,7 +26,6 @@ export function isCandidateRole(value?: string | null) {
 export function getDashboardRole(value?: string | null, selectedRole?: string | null): Exclude<PortalRole, 'unknown' | 'super_admin' | 'atasan'> | 'admin' {
   const role = normalizePortalRole(value);
   if (role !== 'unknown') {
-    if (role === 'training') return 'recruitment';
     if (role === 'super_admin' || role === 'atasan') return 'admin';
     return role;
   }

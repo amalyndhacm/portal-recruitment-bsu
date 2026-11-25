@@ -43,6 +43,7 @@ import CandidatePortalPage from '@/pages/candidate/CandidatePortalPage';
 import CandidateFeaturePage from '@/pages/candidate/CandidateFeaturePage';
 import type { LoginRole } from '@/pages/public/PageHeader';
 import RecruitmentDashboardPage from '@/pages/dashboard/RecruitmentDashboardPage';
+import TrainingDashboardPage from '@/pages/dashboard/TrainingDashboardPage';
 import { getDashboardRole, getRoleLabel, isCandidateRole, normalizePortalRole } from '@/lib/accessControl';
 import type { PortalNotificationDetail } from '@/lib/portalNotifications';
 import { notifyPortal } from '@/lib/portalNotifications';
@@ -53,14 +54,15 @@ function dashboardPageForRole(role?: string): PageId {
   switch (getDashboardRole(role)) {
     case 'candidate': return 'candidate-dashboard';
     case 'recruitment':
-    case 'training': return 'rt-dashboard';
+      return 'rt-dashboard';
+    case 'training': return 'training-dashboard';
     case 'hr': return 'hr-admin';
     case 'comben': return 'cb-incentive';
     default: return 'rt-dashboard';
   }
 }
 
-const roleDashboardPages = new Set<PageId>(['rt-dashboard', 'candidate-dashboard']);
+const roleDashboardPages = new Set<PageId>(['rt-dashboard', 'training-dashboard', 'candidate-dashboard']);
 
 // PERUBAHAN: PublicView diperluas dari 'home' | 'login' menjadi juga
 // mencakup 'register' | 'profile' | 'career' | 'contact' — halaman publik
@@ -99,9 +101,11 @@ export default function App() {
   // dashboard Recruitment yang sama, apa pun role workspace lama yang tersimpan.
   const effectiveAccessLevel = storedUserRole === 'candidate'
     ? 'candidate'
-    : isNipEmployeeAccount
-      ? 'recruitment'
-      : selectedLoginRole ?? user?.accessLevel;
+    : storedUserRole === 'training' || selectedLoginRole === 'training'
+      ? 'training'
+      : isNipEmployeeAccount
+        ? 'recruitment'
+        : selectedLoginRole ?? user?.accessLevel;
   const isCandidate = isCandidateRole(effectiveAccessLevel);
   const isCandidateAccount = normalizePortalRole(user?.accessLevel) === 'candidate';
   const notificationAudience = isCandidate ? 'candidate' : 'recruitment';
@@ -507,6 +511,7 @@ export default function App() {
       case 'candidate-interviews': return <CandidateFeaturePage feature="interviews" name={user.name} email={user.email} />;
       case 'candidate-tracking': return <CandidateFeaturePage feature="tracking" name={user.name} email={user.email} />;
       case 'rt-dashboard': return <RecruitmentDashboardPage name={user.name} onNavigate={setPage} />;
+      case 'training-dashboard': return <TrainingDashboardPage name={user.name} onNavigate={setPage} />;
       case 'hr-weekly': return <WeeklyReportPage />;
       case 'hr-activities': return <EmployeeActivitiesPage />;
       case 'hr-admin': return <EmployeeAdminPage />;
@@ -538,7 +543,8 @@ export default function App() {
       case 'cb-salary-recap': return <SalaryRecapPage />;
       default:
         if (dashboardRole === 'candidate') return <CandidatePortalPage name={user.name} email={user.email} onNavigate={setPage} />;
-        if (dashboardRole === 'recruitment' || dashboardRole === 'training') return <RecruitmentDashboardPage name={user.name} onNavigate={setPage} />;
+        if (dashboardRole === 'training') return <TrainingDashboardPage name={user.name} onNavigate={setPage} />;
+        if (dashboardRole === 'recruitment') return <RecruitmentDashboardPage name={user.name} onNavigate={setPage} />;
         if (dashboardRole === 'hr') return <EmployeeAdminPage />;
         if (dashboardRole === 'comben') return <IncentivePage />;
         return <RecruitmentDashboardPage name={user.name} onNavigate={setPage} />;
